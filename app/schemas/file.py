@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Annotated
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # Определение типов с валидацией
 # Имя файла: от 1 до 255 символов, разрешены буквы, цифры, точки, подчеркивания и дефисы
@@ -23,7 +23,15 @@ class FileCreate(BaseModel):
     filename: Filename
     file_extension: FileExtension
     path: FilePath
+    size: int
     comment: str | None = None
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, v):
+        if not v.startswith("/") or not v.endswith("/"):
+            raise ValueError("Путь должен начинаться и заканчиваться с /")
+        return v
 
 
 class FileRead(BaseModel):
@@ -33,6 +41,9 @@ class FileRead(BaseModel):
     filename: str
     file_extension: str
     path: str
+    size: int
+    created_at: str
+    updated_at: str | None = None
     comment: str | None = None
 
 
@@ -40,6 +51,12 @@ class FileUpdate(BaseModel):
     """Модель для обновления метаданных файла"""
 
     filename: Filename | None = None
-    file_extension: FileExtension | None = None
     path: FilePath | None = None
     comment: str | None = None
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, v):
+        if v is not None and (not v.startswith("/") or not v.endswith("/")):
+            raise ValueError("Путь должен начинаться и заканчиваться с /")
+        return v

@@ -3,6 +3,10 @@ from app.repositories.file_repository import FileRepository
 from app.repositories.file_meta_repository import FileMetaRepository
 from app.schemas.file import FileCreate, FileUpdate
 from app.models import FileMeta
+from app.exceptions.service import (
+    ServiceFileAlreadyExistsError,
+    ServiceFileNotFoundError,
+)
 import uuid
 
 
@@ -43,7 +47,7 @@ class FileHolderService:
             )
             is not None
         ):
-            raise Exception(
+            raise ServiceFileAlreadyExistsError(
                 "File with the same path, filename and extension already exists"
             )
 
@@ -54,6 +58,7 @@ class FileHolderService:
             file_name=file_create.filename,
             file_extension=file_create.file_extension,
             file_path=file_create.path,
+            size=file_create.size,
             comment=file_create.comment,
         )
 
@@ -69,7 +74,7 @@ class FileHolderService:
     async def get_file_by_id(self, file_id: uuid.UUID) -> bytes:
         file_meta = await self.get_file_meta(file_id)
         if file_meta is None:
-            raise Exception("File metadata not found")
+            raise ServiceFileNotFoundError("File metadata not found")
 
         file_path = self._generate_file_path(
             uuid.UUID(file_meta.uuid), file_meta.file_extension
@@ -87,7 +92,7 @@ class FileHolderService:
             file_extension=file_extension,
         )
         if file_meta is None:
-            raise Exception("File metadata not found")
+            raise ServiceFileNotFoundError("File metadata not found")
 
         file_path = self._generate_file_path(
             uuid.UUID(file_meta.uuid), file_meta.file_extension
@@ -99,7 +104,7 @@ class FileHolderService:
     async def delete_file(self, file_id: uuid.UUID) -> bool:
         file_meta = await self.get_file_meta(file_id)
         if file_meta is None:
-            raise Exception("File metadata not found")
+            raise ServiceFileNotFoundError("File metadata not found")
 
         file_path = self._generate_file_path(
             uuid.UUID(file_meta.uuid), file_meta.file_extension
@@ -118,10 +123,13 @@ class FileHolderService:
     ) -> FileMeta:
         file_meta = await self.get_file_meta(file_id)
         if file_meta is None:
-            raise Exception("File metadata not found")
+            raise ServiceFileNotFoundError("File metadata not found")
 
         data = update.model_dump(exclude_unset=True)
         if not data:
             return file_meta
 
         return await self._file_meta_repository.update(file_meta, data)
+
+    async def get_by_path_startswith(self, file_path: str) -> Sequence[FileMeta]:
+        return await self._file_meta_repository.get_by_path_startswith(file_path)

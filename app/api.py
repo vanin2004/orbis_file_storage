@@ -35,27 +35,30 @@ async def post_file(
     Загрузка нового файла.
     Принимает метаданные файла и файл.
     """
+
     file_meta_obj = FileCreate(
         filename=filename,
         file_extension=file_extension,
         path=path,
+        size=1,
         comment=comment,
     )
+
     file_data = await file.read()
 
-    try:
-        saved_meta = await service.create_file(
-            file_data=file_data, file_create=file_meta_obj
-        )
-        return FileRead(
-            id=UUID(saved_meta.uuid),
-            filename=saved_meta.filename,
-            file_extension=saved_meta.file_extension,
-            path=saved_meta.path,
-            comment=saved_meta.comment,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+    saved_meta = await service.create_file(
+        file_data=file_data, file_create=file_meta_obj
+    )
+    return FileRead(
+        id=UUID(saved_meta.uuid),
+        filename=saved_meta.filename,
+        file_extension=saved_meta.file_extension,
+        path=saved_meta.path,
+        size=saved_meta.size,
+        created_at=saved_meta.created_at.isoformat(),
+        updated_at=saved_meta.updated_at.isoformat() if saved_meta.updated_at else None,
+        comment=saved_meta.comment,
+    )
 
 
 @router.get("/files")
@@ -70,6 +73,9 @@ async def list_files(
             filename=meta.filename,
             file_extension=meta.file_extension,
             path=meta.path,
+            size=meta.size,
+            created_at=meta.created_at.isoformat(),
+            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
             comment=meta.comment,
         )
         for meta in files_meta
@@ -91,6 +97,9 @@ async def get_file_meta(
         filename=meta.filename,
         file_extension=meta.file_extension,
         path=meta.path,
+        size=meta.size,
+        created_at=meta.created_at.isoformat(),
+        updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
         comment=meta.comment,
     )
 
@@ -101,11 +110,8 @@ async def get_file(
     service: FileHolderService = Depends(get_file_holder_service),
 ) -> Response:
     """Получение содержимого файла по ID"""
-    try:
-        file_bytes = await service.get_file_by_id(file_id)
-        return Response(content=file_bytes, media_type="application/octet-stream")
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="File not found")
+    file_bytes = await service.get_file_by_id(file_id)
+    return Response(content=file_bytes, media_type="application/octet-stream")
 
 
 @router.delete("/files/{file_id}")
@@ -114,11 +120,30 @@ async def delete_file(
     service: FileHolderService = Depends(get_file_holder_service),
 ):
     """Удаление файла по ID"""
-    try:
-        await service.delete_file(file_id)
-        return {"status": "deleted", "file_id": str(file_id)}
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="File not found")
+    await service.delete_file(file_id)
+    return {"status": "deleted", "file_id": str(file_id)}
+
+
+@router.put("/files/{file_id}")
+async def put_file(
+    file_id: UUID,
+    update: FileUpdate,
+    service: FileHolderService = Depends(get_file_holder_service),
+) -> FileRead:
+    """
+    Полная замена метаданных файла.
+    """
+    updated = await service.update_file_meta(file_id=file_id, update=update)
+    return FileRead(
+        id=UUID(updated.uuid),
+        filename=updated.filename,
+        file_extension=updated.file_extension,
+        path=updated.path,
+        size=updated.size,
+        created_at=updated.created_at.isoformat(),
+        updated_at=updated.updated_at.isoformat() if updated.updated_at else None,
+        comment=updated.comment,
+    )
 
 
 @router.patch("/files/{file_id}")
@@ -127,18 +152,42 @@ async def patch_file(
     update: FileUpdate,
     service: FileHolderService = Depends(get_file_holder_service),
 ) -> FileRead:
-    """Обновление метаданных файла"""
-    try:
-        updated = await service.update_file_meta(file_id=file_id, update=update)
-        return FileRead(
-            id=UUID(updated.uuid),
-            filename=updated.filename,
-            file_extension=updated.file_extension,
-            path=updated.path,
-            comment=updated.comment,
+    """
+    Частичное обновление метаданных файла.
+    """
+    updated = await service.update_file_meta(file_id=file_id, update=update)
+    return FileRead(
+        id=UUID(updated.uuid),
+        filename=updated.filename,
+        file_extension=updated.file_extension,
+        path=updated.path,
+        size=updated.size,
+        created_at=updated.created_at.isoformat(),
+        updated_at=updated.updated_at.isoformat() if updated.updated_at else None,
+        comment=updated.comment,
+    )
+
+
+@router.get("/files/search")
+async def search_files(
+    file_path: FilePath = Form(...),
+    service: FileHolderService = Depends(get_file_holder_service),
+) -> list[FileRead]:
+    """Поиск файлов по пути"""
+
+    return [
+        FileRead(
+            id=UUID(meta.uuid),
+            filename=meta.filename,
+            file_extension=meta.file_extension,
+            path=meta.path,
+            size=meta.size,
+            created_at=meta.created_at.isoformat(),
+            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
+            comment=meta.comment,
         )
-    except Exception as e:
-        raise HTTPException(status_code=404, detail="File not found")
+        for meta in await service.get_by_path_startswith(file_path)
+    ]
 
 
 @router.post("/files/synchronise")

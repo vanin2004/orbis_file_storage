@@ -19,7 +19,10 @@ from app.exceptions.handlers import (
     local_storage_error_handler,
     global_exception_handler,
 )
-from app.exceptions.service import ResourceNotFoundError, ResourceAlreadyExistsError
+from app.exceptions.service import (
+    ServiceFileNotFoundError,
+    ServiceFileAlreadyExistsError,
+)
 from app.exceptions.database import DatabaseError
 from app.exceptions.localstorage import LocalStorageError, LocalStorageUnavailableError
 
@@ -29,10 +32,14 @@ app = FastAPI(
 )
 
 # Регистрация обработчиков ошибок
-app.add_exception_handler(ResourceNotFoundError, resource_not_found_handler)
-app.add_exception_handler(ResourceAlreadyExistsError, resource_already_exists_handler)
+app.add_exception_handler(ServiceFileNotFoundError, resource_not_found_handler)
+app.add_exception_handler(
+    ServiceFileAlreadyExistsError, resource_already_exists_handler
+)
 app.add_exception_handler(DatabaseError, database_error_handler)
-app.add_exception_handler(LocalStorageUnavailableError, local_storage_unavailable_handler)
+app.add_exception_handler(
+    LocalStorageUnavailableError, local_storage_unavailable_handler
+)
 app.add_exception_handler(LocalStorageError, local_storage_error_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 

@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import String, DateTime
+from sqlalchemy import String, DateTime, Integer
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
 
@@ -20,6 +20,9 @@ class FileMeta(Base):
 
     # Расширение файла
     file_extension: Mapped[str] = mapped_column(String, index=True)
+
+    # Размер файла в байтах
+    size: Mapped[int] = mapped_column(Integer)
 
     # Виртуальный путь или категория файла
     path: Mapped[str] = mapped_column(String, index=True)

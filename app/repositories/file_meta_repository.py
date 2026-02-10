@@ -1,16 +1,19 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
+from sqlalchemy.exc import SQLAlchemyError
 from typing import Sequence
 import datetime
 
 from uuid import UUID
 from app.models import FileMeta
+from app.exceptions.database import DatabaseOperationError
 
 
 class FileMetaRepository:
     """
     Репозиторий для работы с метаданными файлов в БД.
     """
+
     def __init__(self, session: AsyncSession):
         self._session = session
 
@@ -28,6 +31,7 @@ class FileMetaRepository:
         file_name: str,
         file_extension: str,
         file_path: str,
+        size: int,
         comment: str | None = None,
     ) -> FileMeta:
         """Сохраняет новую запись о файле"""
@@ -39,24 +43,31 @@ class FileMetaRepository:
             filename=file_name,
             file_extension=file_extension,
             path=file_path,
+            size=size,
             comment=comment,
             created_at=created_at,
             updated_at=None,
         )
 
-        self._session.add(file_meta)
-        await self._session.flush()
+        try:
+            self._session.add(file_meta)
+            await self._session.flush()
 
-        return file_meta
+            return file_meta
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error saving file metadata: {e}")
 
     async def get_by_id(
         self, file_id: UUID | str, limit: int | None = 1, offset: int = 0
     ) -> FileMeta | None:
         """Поиск по UUID"""
-        stmt = select(FileMeta).where(FileMeta.uuid == str(file_id))
-        stmt = self._apply_pagination(stmt, limit, offset)
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        try:
+            stmt = select(FileMeta).where(FileMeta.uuid == str(file_id))
+            stmt = self._apply_pagination(stmt, limit, offset)
+            result = await self._session.execute(stmt)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error retrieving file metadata by ID: {e}")
 
     async def get_by_path_filename_extension(
         self,
@@ -66,63 +77,93 @@ class FileMetaRepository:
         limit: int | None = 1,
         offset: int = 0,
     ) -> FileMeta | None:
-        stmt = select(FileMeta).where(
-            FileMeta.path == file_path,
-            FileMeta.filename == filename,
-            FileMeta.file_extension == file_extension,
-        )
-        stmt = self._apply_pagination(stmt, limit, offset)
-        result = await self._session.execute(stmt)
-        return result.scalar_one_or_none()
+        try:
+            stmt = select(FileMeta).where(
+                FileMeta.path == file_path,
+                FileMeta.filename == filename,
+                FileMeta.file_extension == file_extension,
+            )
+            stmt = self._apply_pagination(stmt, limit, offset)
+            result = await self._session.execute(stmt)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(
+                f"Error retrieving file metadata by path info: {e}"
+            )
 
     async def get_by_path(
         self, file_path: str, limit: int | None = None, offset: int = 0
     ) -> Sequence[FileMeta]:
-        stmt = select(FileMeta).where(FileMeta.path == file_path)
-        stmt = self._apply_pagination(stmt, limit, offset)
-        result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        try:
+            stmt = select(FileMeta).where(FileMeta.path == file_path)
+            stmt = self._apply_pagination(stmt, limit, offset)
+            result = await self._session.execute(stmt)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error retrieving files by path: {e}")
 
     async def get_by_word_in_path(
         self, word: str, limit: int | None = None, offset: int = 0
     ) -> Sequence[FileMeta]:
-        stmt = select(FileMeta).where(FileMeta.path.contains(word))
-        stmt = self._apply_pagination(stmt, limit, offset)
-        result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        try:
+            stmt = select(FileMeta).where(FileMeta.path.contains(word))
+            stmt = self._apply_pagination(stmt, limit, offset)
+            result = await self._session.execute(stmt)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error retrieving files by word in path: {e}")
 
     async def get_by_path_startswith(
         self, word: str, limit: int | None = None, offset: int = 0
     ) -> Sequence[FileMeta]:
-        stmt = select(FileMeta).where(FileMeta.path.startswith(word))
-        stmt = self._apply_pagination(stmt, limit, offset)
-        result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        try:
+            stmt = select(FileMeta).where(FileMeta.path.startswith(word))
+            stmt = self._apply_pagination(stmt, limit, offset)
+            result = await self._session.execute(stmt)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(
+                f"Error retrieving files by path startswith: {e}"
+            )
 
     async def list(
         self, limit: int | None = None, offset: int = 0
     ) -> Sequence[FileMeta]:
-        stmt = self._apply_pagination(select(FileMeta), limit, offset)
-        result = await self._session.execute(stmt)
-        return list(result.scalars().all())
+        try:
+            stmt = self._apply_pagination(select(FileMeta), limit, offset)
+            result = await self._session.execute(stmt)
+            return list(result.scalars().all())
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error listing files: {e}")
 
     async def delete(self, file_meta: FileMeta) -> bool:
-        await self._session.delete(file_meta)
-        return True
+        try:
+            await self._session.delete(file_meta)
+            return True
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error deleting file metadata: {e}")
 
     async def delete_many(self, file_metas: Sequence[FileMeta]) -> bool:
         if not file_metas:
             return False
 
         uuids = [str(file_meta.uuid) for file_meta in file_metas]
-        result = await self._session.execute(
-            delete(FileMeta).where(FileMeta.uuid.in_(uuids)).returning(FileMeta.uuid)
-        )
-        return result.first() is not None
+        try:
+            result = await self._session.execute(
+                delete(FileMeta)
+                .where(FileMeta.uuid.in_(uuids))
+                .returning(FileMeta.uuid)
+            )
+            return result.first() is not None
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error deleting multiple file metadata: {e}")
 
     async def update(self, file_meta: FileMeta, data: dict) -> FileMeta:
-        for key, value in data.items():
-            setattr(file_meta, key, value)
-        file_meta.updated_at = datetime.datetime.now(datetime.timezone.utc)
-        await self._session.flush()
-        return file_meta
+        try:
+            for key, value in data.items():
+                setattr(file_meta, key, value)
+            file_meta.updated_at = datetime.datetime.now(datetime.timezone.utc)
+            await self._session.flush()
+            return file_meta
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error updating file metadata: {e}")
