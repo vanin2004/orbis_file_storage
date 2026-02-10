@@ -1,28 +1,28 @@
 class LocalStorageError(Exception):
-    """Base exception for local storage errors."""
+    """Базовый класс для ошибок локального хранилища."""
 
     pass
 
 
 class LocalStorageUnavailableError(LocalStorageError):
-    """Raised when the local storage is unavailable (e.g., disk full, permission issues)."""
+    """Вызывается, когда локальное хранилище недоступно (например, диск полон, проблемы с правами)."""
 
     pass
 
 
 class FileLockError(LocalStorageError):
-    """Raised when acquiring or releasing a file lock fails."""
+    """Вызывается, когда захват или освобождение блокировки файла не удается."""
 
     pass
 
 
 class FileNotFoundError(LocalStorageError):
-    """Raised when a requested file is not found in storage."""
+    """Вызывается, когда запрашиваемый файл не найден в хранилище."""
 
     pass
 
 
 class FileWriteError(LocalStorageError):
-    """Raised when writing a file to storage fails."""
+    """Вызывается, когда запись файла в хранилище не удается."""
 
     pass

@@ -18,24 +18,22 @@ class FileMeta(Base):
     # Имя файла (без расширения)
     filename: Mapped[str] = mapped_column(String, index=True)
 
-    # Расширение файла
+    # Расширение файла (например, ".txt")
     file_extension: Mapped[str] = mapped_column(String, index=True)
 
     # Размер файла в байтах
     size: Mapped[int] = mapped_column(Integer)
 
-    # Виртуальный путь или категория файла
+    # Виртуальный путь или категория файла (определяет иерархию директорий)
     path: Mapped[str] = mapped_column(String, index=True)
 
-    # Произвольный комментарий
+    # Произвольный комментарий к файлу
     comment: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    # Дата и время создания (UTC)
+    # Дата и время создания файла (в UTC)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True))
 
-    # Дата и время последнего обновления
+    # Дата и время последнего обновления метаданных файла
     updated_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    # is_pending = Column(Boolean, default=True, nullable=False)
-    # is_deleted = Column(Boolean, default=False, nullable=False)

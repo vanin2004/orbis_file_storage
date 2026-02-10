@@ -1,5 +1,5 @@
 from fastapi.routing import APIRouter
-from fastapi import Response, UploadFile, File, Form, Depends, HTTPException
+from fastapi import Response, UploadFile, File, Form, Query, Depends, HTTPException
 from uuid import UUID
 
 from app.schemas.file import (
@@ -24,12 +24,12 @@ async def health_check():
 
 @router.post("/files")
 async def post_file(
-    filename: Filename = Form(...),
-    file_extension: FileExtension = Form(...),
-    path: FilePath = Form(...),
-    comment: str | None = Form(None),
-    file: UploadFile = File(...),
-    service: FileHolderService = Depends(get_file_holder_service),
+    filename: Filename = Form(...),  # Имя файла без расширения
+    file_extension: FileExtension = Form(...),  # Расширение файла (например, "txt")
+    path: FilePath = Form(...),  # Путь расположения файла в хранилище
+    comment: str | None = Form(None),  # Опциональный комментарий к файлу
+    file: UploadFile = File(...),  # Загружаемый файл
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ) -> FileRead:
     """
     Загрузка нового файла.
@@ -82,10 +82,32 @@ async def list_files(
     ]
 
 
+@router.get("/files/search")
+async def search_files(
+    file_path: FilePath = Query(...),  # Префикс пути для поиска файлов
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
+) -> list[FileRead]:
+    """Поиск файлов по префиксу пути"""
+    files_meta = await service.search_files_by_path(file_path)
+    return [
+        FileRead(
+            id=UUID(meta.uuid),
+            filename=meta.filename,
+            file_extension=meta.file_extension,
+            path=meta.path,
+            size=meta.size,
+            created_at=meta.created_at.isoformat(),
+            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
+            comment=meta.comment,
+        )
+        for meta in files_meta
+    ]
+
+
 @router.get("/files/{file_id}/meta")
 async def get_file_meta(
-    file_id: UUID,
-    service: FileHolderService = Depends(get_file_holder_service),
+    file_id: UUID,  # Уникальный идентификатор файла
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ) -> FileRead:
     """Получение метаданных файла по ID"""
     meta = await service.get_file_meta(file_id)
@@ -106,8 +128,8 @@ async def get_file_meta(
 
 @router.get("/files/{file_id}")
 async def get_file(
-    file_id: UUID,
-    service: FileHolderService = Depends(get_file_holder_service),
+    file_id: UUID,  # Уникальный идентификатор файла
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ) -> Response:
     """Получение содержимого файла по ID"""
     file_bytes = await service.get_file_by_id(file_id)
@@ -116,8 +138,8 @@ async def get_file(
 
 @router.delete("/files/{file_id}")
 async def delete_file(
-    file_id: UUID,
-    service: FileHolderService = Depends(get_file_holder_service),
+    file_id: UUID,  # Уникальный идентификатор файла
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ):
     """Удаление файла по ID"""
     await service.delete_file(file_id)
@@ -126,9 +148,9 @@ async def delete_file(
 
 @router.put("/files/{file_id}")
 async def put_file(
-    file_id: UUID,
-    update: FileUpdate,
-    service: FileHolderService = Depends(get_file_holder_service),
+    file_id: UUID,  # Уникальный идентификатор файла
+    update: FileUpdate,  # Новые метаданные для полной замены
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ) -> FileRead:
     """
     Полная замена метаданных файла.
@@ -148,9 +170,9 @@ async def put_file(
 
 @router.patch("/files/{file_id}")
 async def patch_file(
-    file_id: UUID,
-    update: FileUpdate,
-    service: FileHolderService = Depends(get_file_holder_service),
+    file_id: UUID,  # Уникальный идентификатор файла
+    update: FileUpdate,  # Новые метаданные для частичного обновления
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
 ) -> FileRead:
     """
     Частичное обновление метаданных файла.
@@ -168,29 +190,31 @@ async def patch_file(
     )
 
 
-@router.get("/files/search")
-async def search_files(
-    file_path: FilePath = Form(...),
-    service: FileHolderService = Depends(get_file_holder_service),
-) -> list[FileRead]:
-    """Поиск файлов по пути"""
-
-    return [
-        FileRead(
-            id=UUID(meta.uuid),
-            filename=meta.filename,
-            file_extension=meta.file_extension,
-            path=meta.path,
-            size=meta.size,
-            created_at=meta.created_at.isoformat(),
-            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
-            comment=meta.comment,
-        )
-        for meta in await service.get_by_path_startswith(file_path)
-    ]
-
-
 @router.post("/files/synchronise")
-async def synchronise_files():
-    print("Synchronising files")
+async def synchronise_files(
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
+):
+    await service.sync_storage_with_db()
     return {"status": "synchronised"}
+
+
+@router.get("/files/meta/by-path")
+async def get_file_meta_by_full_path(
+    full_path: FilePath = Query(...),  # Полный путь к файлу для поиска метаданных
+    service: FileHolderService = Depends(get_file_holder_service),  # Сервис для работы с файлами
+) -> FileRead:
+    """Получение метаданных файла по полному пути"""
+    meta = await service.get_file_meta_by_full_path(full_path)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileRead(
+        id=UUID(meta.uuid),
+        filename=meta.filename,
+        file_extension=meta.file_extension,
+        path=meta.path,
+        size=meta.size,
+        created_at=meta.created_at.isoformat(),
+        updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
+        comment=meta.comment,
+    )

@@ -1,3 +1,8 @@
+"""
+Основной модуль приложения Orbis File Storage.
+Инициализирует FastAPI приложение, регистрирует маршруты и обработчики ошибок.
+"""
+
 from fastapi import FastAPI
 import uvicorn
 import sys
@@ -57,8 +62,8 @@ if __name__ == "__main__":
     # Запуск сервера uvicorn для локальной разработки
     uvicorn.run(
         "app.main:app",
-        host="0.0.0.0",
-        port=8000,
+        host=settings.app_host,
+        port=settings.app_port,
         reload=settings.debug,
         log_level="debug",
     )

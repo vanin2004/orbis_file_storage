@@ -36,7 +36,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def create_database():
     """Создает все таблицы в базе данных при старте приложения."""
-    retries = 5
+    retries = settings.db_retries
     for attempt in range(retries):
         try:
             async with engine.begin() as conn:
@@ -44,7 +44,7 @@ async def create_database():
             break
         except Exception as e:
             if attempt < retries - 1:
-                await asyncio.sleep(2)
+                await asyncio.sleep(settings.db_retry_delay)
             else:
                 raise DatabaseError(
                     f"Error creating database after {retries} attempts: {e}"

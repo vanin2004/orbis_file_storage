@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func, case
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Sequence
 import datetime
@@ -14,11 +14,13 @@ class FileMetaRepository:
     Репозиторий для работы с метаданными файлов в БД.
     """
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession):  # session: асинхронная сессия БД
         self._session = session
 
     @staticmethod
-    def _apply_pagination(stmt, limit: int | None, offset: int):
+    def _apply_pagination(
+        stmt, limit: int | None, offset: int
+    ):  # stmt: SQL запрос, limit: максимум записей, offset: смещение
         """Применяет пагинацию к запросу"""
         stmt = stmt.offset(offset)
         if limit is not None:
@@ -27,12 +29,12 @@ class FileMetaRepository:
 
     async def save(
         self,
-        uuid: UUID,
-        file_name: str,
-        file_extension: str,
-        file_path: str,
-        size: int,
-        comment: str | None = None,
+        uuid: UUID,  # Уникальный идентификатор файла
+        file_name: str,  # Имя файла без расширения
+        file_extension: str,  # Расширение файла
+        file_path: str,  # Путь расположения файла
+        size: int,  # Размер файла в байтах
+        comment: str | None = None,  # Комментарий к файлу
     ) -> FileMeta:
         """Сохраняет новую запись о файле"""
 
@@ -167,3 +169,24 @@ class FileMetaRepository:
             return file_meta
         except SQLAlchemyError as e:
             raise DatabaseOperationError(f"Error updating file metadata: {e}")
+
+    async def get_by_full_path(self, full_path: str) -> FileMeta | None:
+        """
+        Получает метаданные файла по полному пути.
+        """
+        try:
+            stmt = select(FileMeta).where(
+                func.concat(
+                    FileMeta.path,
+                    FileMeta.filename,
+                    case(
+                        (FileMeta.file_extension != "", "." + FileMeta.file_extension),
+                        else_="",
+                    ),
+                )
+                == full_path
+            )
+            result = await self._session.execute(stmt)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            raise DatabaseOperationError(f"Error retrieving file by full path: {e}")

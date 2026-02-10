@@ -13,11 +13,13 @@ from app.exceptions.localstorage import FileLockError, LocalStorageUnavailableEr
 
 
 class LockMode(str, Enum):
-    SHARED = "shared"
-    EXCLUSIVE = "exclusive"
+    """Режимы блокировки файлов."""
+
+    SHARED = "shared"  # Разделяемая блокировка (несколько читателей)
+    EXCLUSIVE = "exclusive"  # Эксклюзивная блокировка (один писатель)
 
 
-LOCK_FILE_SUFFIX = ".lock"
+LOCK_FILE_SUFFIX = ".lock"  # Суффикс для файлов блокировки
 
 
 class AsyncFileSession:
@@ -28,14 +30,14 @@ class AsyncFileSession:
 
     def __init__(
         self,
-        storage_path: str,
-        pending_prefix: str = "pending_",
-        lock_timeout: float = 10.0,
+        storage_path: str,  # Путь к директории хранения файлов
+        pending_prefix: str = "pending_",  # Префикс для временных файлов
+        lock_timeout: float = 10.0,  # Таймаут ожидания блокировки в секундах
     ):
         self._storage_path = storage_path
         self._pending_prefix = pending_prefix
         self._lock_timeout = lock_timeout
-        self._pending: dict[str, bytes] = {}
+        self._pending: dict[str, bytes] = {}  # Буфер для ожидающих записи файлов
         # Хранит активные блокировки: имя файла -> (файловый дескриптор, режим блокировки)
         self._locks: dict[str, tuple[IO[str], LockMode]] = {}
         os.makedirs(storage_path, exist_ok=True)
@@ -76,7 +78,9 @@ class AsyncFileSession:
 
         self._locks[file_name] = (await asyncio.to_thread(_lock), mode)
 
-    async def _release_lock(self, file_name: str) -> None:
+    async def _release_lock(
+        self, file_name: str
+    ) -> None:  # file_name: имя файла для снятия блокировки
         """Освобождает блокировку файла"""
         entry = self._locks.pop(file_name, None)
         if entry is None:
@@ -107,7 +111,9 @@ class AsyncFileSession:
             finally:
                 await self._release_lock(file_name)
 
-    async def add(self, file_bytes: bytes, file_name: str) -> None:
+    async def add(
+        self, file_bytes: bytes, file_name: str
+    ) -> None:  # file_bytes: содержимое файла, file_name: имя файла
         """Добавляет файл в очередь на запись (в памяти)"""
         await self._acquire_lock(file_name, LockMode.EXCLUSIVE)
         self._pending[file_name] = file_bytes
@@ -163,7 +169,8 @@ class AsyncFileSession:
                 await self._release_lock(file_name)
             self._pending.clear()
 
-    async def get(self, file_name: str) -> bytes:
+    async def get(self, file_name: str) -> bytes:  # file_name: имя файла для чтения
+        """Читает содержимое файла"""
         await self._acquire_lock(file_name, LockMode.SHARED)
         try:
             async with aiofiles.open(
@@ -173,7 +180,8 @@ class AsyncFileSession:
         finally:
             await self._release_lock(file_name)
 
-    async def delete(self, file_name: str) -> bool:
+    async def delete(self, file_name: str) -> bool:  # file_name: имя файла для удаления
+        """Удаляет файл из хранилища"""
         await self._acquire_lock(file_name, LockMode.EXCLUSIVE)
         try:
             file_path = os.path.join(self._storage_path, file_name)
@@ -201,7 +209,10 @@ class AsyncFileSession:
         except Exception:
             raise LocalStorageUnavailableError("File storage is currently unavailable")
 
-    async def is_exists(self, file_name: str) -> bool:
+    async def is_exists(
+        self, file_name: str
+    ) -> bool:  # file_name: имя файла для проверки
+        """Проверяет существование файла"""
         try:
             return await aiofiles.os.path.exists(
                 os.path.join(self._storage_path, file_name)
@@ -214,6 +225,7 @@ async def get_file_session() -> AsyncGenerator[AsyncFileSession, None]:
     session = AsyncFileSession(
         storage_path=settings.file_storage_path,
         pending_prefix=settings.pending_file_prefix,
+        lock_timeout=settings.lock_timeout,
     )
     await session.recover()
     try:
