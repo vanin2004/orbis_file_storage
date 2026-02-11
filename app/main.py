@@ -5,15 +5,10 @@
 
 from fastapi import FastAPI
 import uvicorn
-import sys
-import os
 
 from app.core.localstorage import create_file_storage_directory
 from app.core.database import create_database
 from app.core.settings import settings
-
-# Добавляем родительскую директорию в путь поиска модулей
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.api import router as api_router
 from app.exceptions.handlers import (

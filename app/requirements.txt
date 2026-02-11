@@ -1,2 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+alembic
+pydantic
+pydantic-settings
+python-multipart
+asyncpg
 aiofiles
 portalocker
