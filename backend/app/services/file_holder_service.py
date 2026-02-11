@@ -1,7 +1,7 @@
 from typing import Sequence
 from app.repositories.file_repository import FileRepository
 from app.repositories.file_meta_repository import FileMetaRepository
-from app.schemas.file import FileCreate, FileUpdate
+from app.schemas import FileCreate, FileUpdate
 from app.models import FileMeta
 from app.exceptions.service import (
     ServiceFileAlreadyExistsError,

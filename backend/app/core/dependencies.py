@@ -7,7 +7,7 @@ from app.core.localstorage import AsyncFileSession, get_file_session
 from app.core.settings import settings
 from app.repositories.file_repository import FileRepository
 from app.repositories.file_meta_repository import FileMetaRepository
-from app.core.file_holder_service import FileHolderService
+from app.services.file_holder_service import FileHolderService
 
 
 def get_file_repository(
