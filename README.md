@@ -12,17 +12,6 @@ Backend веб-приложение для управления файловым
 - PostgreSQL 15+
 - Docker (рекомендуется для запуска)
 
-## Зависимости
-
-Основные зависимости перечислены в `app/requirements.txt`:
-- fastapi
-- uvicorn
-- sqlalchemy
-- asyncpg
-- pydantic
-- aiofiles
-- portalocker
-
 ## Запуск с Docker
 
 1. Убедитесь, что Docker установлен.
@@ -140,7 +129,7 @@ curl -X PATCH "http://localhost:8000/files/{file_id}" \
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "filename": "my-file",
-  "file_extension": ".txt",
+  "file_extension": "txt",
   "size": 10325,
   "path": "/root-folder/my-storage/",
   "created_at": "2020-05-12T13:48:10.034677",
