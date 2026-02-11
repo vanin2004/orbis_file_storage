@@ -1,13 +1,13 @@
 services:
-  app:
-    build: ./app
+  backend:
+    build: ./backend
     ports:
       - "8000:8000"
     env_file:
       - .env
     restart: always
     volumes:
-      - ./volumes/file_storage:/app/uploads
+      - ./volumes/file_storage:/backend/uploads
 
   db:
     image: postgres:15-alpine
