@@ -1,19 +1,17 @@
 from fastapi.routing import APIRouter
-from fastapi import Response, UploadFile, File, Form, Query, Depends, HTTPException
+from fastapi import Response, UploadFile, File, Form, Query, Depends
 from uuid import UUID
 
-from src.models import (
-    FileRead,
-    FileUpdate,
-    Filename,
-    FileExtension,
-    FilePath,
-)
+from src.models import FileUpdate, Filename, FileExtension, FilePath, FileRead
 
 from src.injectors import get_file_holder_service
 from src.services import FileHolderService
 
 router = APIRouter()
+
+
+def _to_file_meta_read(meta) -> FileRead:
+    return FileRead.model_validate(meta)
 
 
 @router.get("/health")
@@ -52,16 +50,7 @@ async def post_file(
         file_path=path,
         comment=comment,
     )
-    return FileRead(
-        id=UUID(saved_meta.uuid),
-        filename=saved_meta.filename,
-        file_extension=saved_meta.file_extension,
-        path=saved_meta.path,
-        size=saved_meta.size,
-        created_at=saved_meta.created_at.isoformat(),
-        updated_at=saved_meta.updated_at.isoformat() if saved_meta.updated_at else None,
-        comment=saved_meta.comment,
-    )
+    return _to_file_meta_read(saved_meta)
 
 
 @router.get("/files")
@@ -70,19 +59,7 @@ async def list_files(
 ) -> list[FileRead]:
     """Получение списка всех файлов"""
     files_meta = await service.list_files()
-    return [
-        FileRead(
-            id=UUID(meta.uuid),
-            filename=meta.filename,
-            file_extension=meta.file_extension,
-            path=meta.path,
-            size=meta.size,
-            created_at=meta.created_at.isoformat(),
-            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
-            comment=meta.comment,
-        )
-        for meta in files_meta
-    ]
+    return [_to_file_meta_read(meta) for meta in files_meta]
 
 
 @router.get("/files/search")
@@ -98,19 +75,7 @@ async def search_files(
         service (FileHolderService): сервис работы с файлами
     """
     files_meta = await service.search_files_by_path(file_path)
-    return [
-        FileRead(
-            id=UUID(meta.uuid),
-            filename=meta.filename,
-            file_extension=meta.file_extension,
-            path=meta.path,
-            size=meta.size,
-            created_at=meta.created_at.isoformat(),
-            updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
-            comment=meta.comment,
-        )
-        for meta in files_meta
-    ]
+    return [_to_file_meta_read(meta) for meta in files_meta]
 
 
 @router.get("/files/{file_id}/meta")
@@ -127,16 +92,7 @@ async def get_file_meta(
     """
     meta = await service.get_file_meta(file_id)
 
-    return FileRead(
-        id=UUID(meta.uuid),
-        filename=meta.filename,
-        file_extension=meta.file_extension,
-        path=meta.path,
-        size=meta.size,
-        created_at=meta.created_at.isoformat(),
-        updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
-        comment=meta.comment,
-    )
+    return _to_file_meta_read(meta)
 
 
 @router.get("/files/{file_id}")
@@ -192,16 +148,7 @@ async def put_file(
         path=update.path,
         comment=update.comment,
     )
-    return FileRead(
-        id=UUID(updated.uuid),
-        filename=updated.filename,
-        file_extension=updated.file_extension,
-        path=updated.path,
-        size=updated.size,
-        created_at=updated.created_at.isoformat(),
-        updated_at=updated.updated_at.isoformat() if updated.updated_at else None,
-        comment=updated.comment,
-    )
+    return _to_file_meta_read(updated)
 
 
 @router.patch("/files/{file_id}")
@@ -225,16 +172,7 @@ async def patch_file(
         path=update.path,
         comment=update.comment,
     )
-    return FileRead(
-        id=UUID(updated.uuid),
-        filename=updated.filename,
-        file_extension=updated.file_extension,
-        path=updated.path,
-        size=updated.size,
-        created_at=updated.created_at.isoformat(),
-        updated_at=updated.updated_at.isoformat() if updated.updated_at else None,
-        comment=updated.comment,
-    )
+    return _to_file_meta_read(updated)
 
 
 @router.post("/files/synchronise")
@@ -262,16 +200,5 @@ async def get_file_meta_by_full_path(
         service (FileHolderService): сервис работы с файлами
     """
     meta = await service.get_file_meta_by_full_path(path, filename, file_extension)
-    if meta is None:
-        raise HTTPException(status_code=404, detail="File not found")
 
-    return FileRead(
-        id=UUID(meta.uuid),
-        filename=meta.filename,
-        file_extension=meta.file_extension,
-        path=meta.path,
-        size=meta.size,
-        created_at=meta.created_at.isoformat(),
-        updated_at=meta.updated_at.isoformat() if meta.updated_at else None,
-        comment=meta.comment,
-    )
+    return _to_file_meta_read(meta)

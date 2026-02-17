@@ -7,7 +7,8 @@ FilePath: 1-1024 символов, начинается и заканчивае�
 
 from uuid import UUID
 from typing import Annotated
-from pydantic import BaseModel, Field
+from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict
 
 Filename = Annotated[
     str, Field(min_length=1, max_length=255, pattern=r"^[a-zA-Z0-9._-]+$")
@@ -31,16 +32,18 @@ class FileCreate(BaseModel):
 
 
 class FileRead(BaseModel):
-    """Модель для чтения записи о файле (возвращается клиенту)"""
+    """Pydantic-модель метаданных файла для ответов API"""
 
-    id: UUID
+    model_config = ConfigDict(from_attributes=True)
+
+    uuid: UUID
     filename: str
     file_extension: str
-    path: str
     size: int
-    created_at: str
-    updated_at: str | None = None
+    path: str
     comment: str | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
 
 
 class FileUpdate(BaseModel):
