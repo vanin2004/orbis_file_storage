@@ -2,6 +2,8 @@ import aiofiles
 import aiofiles.os
 import os
 
+from src.config import FsConfig
+
 
 class LocalStorageError(Exception):
     """Базовый класс для ошибок локального хранилища."""
@@ -35,7 +37,7 @@ class AsyncFileSession:
 
     def __init__(
         self,
-        storage_path: str,
+        config: FsConfig,
     ):
         """
         Инициализация асинхронной файловой сессии.
@@ -44,9 +46,10 @@ class AsyncFileSession:
             storage_path (str): путь к директории хранения файлов
             pending_prefix (str): префикс для временных файлов
         """
-        self._storage_path = storage_path
+
+        self._storage_path = config.file_storage_path
         self._pending: dict[str, bytes] = {}
-        os.makedirs(storage_path, exist_ok=True)
+        os.makedirs(self._storage_path, exist_ok=True)
 
     async def add(self, file_bytes: bytes, file_name: str) -> None:
         """Добавляет файл в очередь на запись (в памяти)"""

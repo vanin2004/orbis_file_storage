@@ -5,14 +5,13 @@ import time
 from fastapi import Depends
 from functools import lru_cache
 
-from src.settings import pg_config
+from src.config import pg_config, fs_config
 
 from src.models import Base
 
 import os
 from typing import Callable
 from src.services import AsyncFileSession
-from src.settings import fs_config
 
 
 class DatabaseError(Exception):
@@ -95,7 +94,7 @@ def create_file_storage() -> Callable[[], AsyncFileSession]:
     config = fs_config
     os.makedirs(config.file_storage_path, exist_ok=True)
     return lambda: AsyncFileSession(
-        storage_path=config.file_storage_path,
+        config=fs_config,
     )
 
 

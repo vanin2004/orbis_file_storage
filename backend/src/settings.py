@@ -38,15 +38,3 @@ class Settings(BaseSettings):
 
 # Глобальный экземпляр настроек
 settings = Settings()
-
-pg_config = PgConfig(
-    database_url=settings.database_url,
-    retries=settings.db_retries,
-    retry_delay_sec=settings.db_retry_delay,
-    debug_mode=settings.debug,
-)
-
-fs_config = FsConfig(
-    file_storage_path=settings.file_storage_path,
-    pending_file_prefix=settings.pending_file_prefix,
-)
