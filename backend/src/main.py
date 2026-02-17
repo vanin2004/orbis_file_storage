@@ -7,21 +7,20 @@ from fastapi import FastAPI
 import uvicorn
 from contextlib import asynccontextmanager
 
-from src.routers.api import router as api_router
-from src.routers.handlers import (
+from src.routers import router as api_router
+from src.routers import (
     resource_not_found_handler,
     resource_already_exists_handler,
-    database_error_handler,
-    local_storage_unavailable_handler,
-    local_storage_error_handler,
-    global_exception_handler,
+    # database_error_handler,
+    # local_storage_unavailable_handler,
+    # local_storage_error_handler,
 )
 from src.services.file_holder_service import (
     ServiceFileNotFoundError,
     ServiceFileAlreadyExistsError,
 )
 
-from src.injectors.connections import (
+from src.injectors import (
     create_database,
     initialize_database,
     create_file_storage,

@@ -2,7 +2,7 @@ from fastapi.routing import APIRouter
 from fastapi import Response, UploadFile, File, Form, Query, Depends, HTTPException
 from uuid import UUID
 
-from .schemas.schemas import (
+from src.models import (
     FileRead,
     FileUpdate,
     Filename,
@@ -10,7 +10,7 @@ from .schemas.schemas import (
     FilePath,
 )
 
-from src.injectors.services import get_file_holder_service
+from src.injectors import get_file_holder_service
 from src.services import FileHolderService
 
 router = APIRouter()

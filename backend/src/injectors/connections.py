@@ -7,7 +7,7 @@ from functools import lru_cache
 
 from src.settings import pg_config
 
-from src.models.declarative_base import Base
+from src.models import Base
 
 import os
 from typing import Callable

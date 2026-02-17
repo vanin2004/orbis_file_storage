@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from src.models.file_meta import FileMeta
+from src.models import FileMeta
 
 from .file_storage import AsyncFileSession
 from sqlalchemy.ext.asyncio import AsyncSession
