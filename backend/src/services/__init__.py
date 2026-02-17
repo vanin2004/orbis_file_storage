@@ -1,6 +1,6 @@
 from .file_holder_service import FileHolderService
 from .file_storage import (
-    AsyncFileSession,
+    AsyncFileService,
     LocalStorageError,
     LocalStorageUnavailableError,
     FileNotFoundError,
@@ -10,7 +10,7 @@ from .file_storage import (
 
 __all__ = [
     "FileHolderService",
-    "AsyncFileSession",
+    "AsyncFileService",
     "LocalStorageError",
     "LocalStorageUnavailableError",
     "FileNotFoundError",

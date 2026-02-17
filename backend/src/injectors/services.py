@@ -22,9 +22,7 @@ async def get_file_holder_service(
         yield service
 
         await db_session.commit()
-        await file_session.commit()
 
     except Exception:
         await db_session.rollback()
-        await file_session.rollback()
         raise

@@ -11,7 +11,7 @@ from src.models import Base
 
 import os
 from typing import Callable
-from src.services import AsyncFileSession
+from src.services import AsyncFileService
 
 
 class DatabaseError(Exception):
@@ -90,21 +90,15 @@ async def get_db(
 
 
 @lru_cache(maxsize=1)
-def create_file_storage() -> Callable[[], AsyncFileSession]:
+def create_file_storage() -> Callable[[], AsyncFileService]:
     config = fs_config
     os.makedirs(config.file_storage_path, exist_ok=True)
-    return lambda: AsyncFileSession(
+    return lambda: AsyncFileService(
         config=fs_config,
     )
 
 
 async def get_fs(
-    async_session: Callable[[], AsyncFileSession] = Depends(create_file_storage),
-) -> AsyncGenerator[AsyncFileSession, None]:
-    session = async_session()
-    try:
-        yield session
-        await session.commit()
-    except Exception:
-        await session.rollback()
-        raise
+    async_session: Callable[[], AsyncFileService] = Depends(create_file_storage),
+) -> AsyncFileService:
+    return async_session()

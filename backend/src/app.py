@@ -26,7 +26,7 @@ from src.injectors import (
     create_file_storage,
 )
 
-from src.settings import settings
+from src.config import fastapi_config
 
 
 @asynccontextmanager
@@ -51,8 +51,8 @@ app.add_exception_handler(
 if __name__ == "__main__":
     uvicorn.run(
         "src.app:app",
-        host=settings.app_host,
-        port=settings.app_port,
-        reload=settings.debug,
-        log_level="debug",
+        host=fastapi_config.host,
+        port=fastapi_config.port,
+        reload=fastapi_config.reload,
+        log_level=fastapi_config.log_level,
     )

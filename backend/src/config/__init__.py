@@ -1,7 +1,8 @@
 from .pg import PgConfig
 from .fs import FsConfig
+from .fastapi import FastAPIConfig
 
-from src.settings import settings
+from .settings import settings
 
 
 pg_config = PgConfig(
@@ -13,6 +14,19 @@ pg_config = PgConfig(
 fs_config = FsConfig(
     file_storage_path=settings.file_storage_path,
 )
+fastapi_config = FastAPIConfig(
+    host=settings.app_host,
+    port=settings.app_port,
+    log_level="debug" if settings.debug else "info",
+    reload=settings.debug,
+)
 
 
-__all__ = ["PgConfig", "FsConfig", "pg_config", "fs_config"]
+__all__ = [
+    "PgConfig",
+    "FsConfig",
+    "FastAPIConfig",
+    "pg_config",
+    "fs_config",
+    "fastapi_config",
+]

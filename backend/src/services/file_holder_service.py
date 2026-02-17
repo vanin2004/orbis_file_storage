@@ -2,7 +2,7 @@ from typing import Sequence
 
 from src.models import FileMeta
 
-from .file_storage import AsyncFileSession
+from .file_storage import AsyncFileService
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -34,7 +34,7 @@ class FileHolderService:
     Оркестрирует работу с метаданными (БД) и физическим хранилищем файлов.
     """
 
-    def __init__(self, file_session: AsyncFileSession, file_meta_session: AsyncSession):
+    def __init__(self, file_session: AsyncFileService, file_meta_session: AsyncSession):
         """
         Инициализация сервиса управления файлами.
 
@@ -100,11 +100,8 @@ class FileHolderService:
             raise ServiceError(f"Failed to save file metadata: {e}") from e
 
         file_path = self._generate_file_path(file_id)
-
-        await self._file_session.add(file_data, file_path)
-
         try:
-            await self._file_session.flush()
+            await self._file_session.set(file_data, file_path)
         except Exception:
             await self._file_meta_session.rollback()
             raise ServiceError("Failed to save file content")
@@ -141,7 +138,7 @@ class FileHolderService:
         file_path = self._generate_file_path(uuid.UUID(file_meta.uuid))
         try:
             file_bytes = await self._file_session.get(file_path)
-        except FileNotFoundError:
+        except Exception:
             raise ServiceFileNotFoundError("File not found in storage")
 
         return file_bytes
@@ -278,7 +275,13 @@ class FileHolderService:
         file_meta_list = res.scalars().all()
 
         uuids = {file_meta.uuid for file_meta in file_meta_list}
-        files = await self._file_session.list_all_files()
+        files = set(await self._file_session.list_files())
+
+        print(
+            f"Syncing storage with DB: {len(files)} files in storage, {len(file_meta_list)} records in DB"
+        )
+        print(f"UUIDs in DB: {uuids}")
+        print(f"Files in storage: {files}")
         for file in files:
             if file not in uuids:
                 try:
@@ -287,6 +290,16 @@ class FileHolderService:
                     pass
                 except Exception as e:
                     raise ServiceError(f"Failed to delete file '{file}': {e}")
+
+        for file_meta in file_meta_list:
+            file_path = self._generate_file_path(uuid.UUID(file_meta.uuid))
+            try:
+                is_exists = await self._file_session.is_exists(file_path)
+                if not is_exists:
+                    await self._file_meta_session.delete(file_meta)
+                    print(f"Deleted metadata for missing file: {file_meta.uuid}")
+            except Exception as e:
+                raise ServiceError(f"Failed to access file '{file_path}': {e}")
 
     async def get_file_meta_by_full_path(
         self, file_path: str, filename: str, file_extension: str
